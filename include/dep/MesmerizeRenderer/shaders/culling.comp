@@ -1,0 +1,73 @@
+#version 450
+
+struct VkDrawIndexedIndirectCommand  {
+    uint    indexCount;
+    uint    instanceCount;
+    uint    firstIndex;
+    int     vertexOffset;
+    uint    firstInstance;
+};
+
+struct Fullcrums{
+    vec4 left;
+    vec4 right;
+    vec4 top;
+    vec4 bottom;
+    vec4 near;
+    vec4 far;
+};
+
+layout(binding = 0) uniform boundingSphere{ 
+	vec4 sphereData[1024];
+    uvec4 instanceCount[1024/4];
+} spheres;
+
+layout(binding = 1) uniform cameraFullcrumsInfo{
+    Fullcrums fullcrums[1024];
+} cameraFullcrums;
+
+layout(binding = 2) readonly buffer drawCommandSSBOIn {
+   VkDrawIndexedIndirectCommand  drawCommandsIn[1024];
+};
+
+layout(binding = 3) buffer drawCommandSSBOOut {
+   VkDrawIndexedIndirectCommand  drawCommandsOut[1024];
+};
+
+
+bool inPlane(vec3 planeNormal, float planeDistance, vec3 pos, float radius){
+    return dot(planeNormal, pos) - planeDistance > radius;
+}
+
+bool IsVisible(uint objectIndex)
+{
+    bool visible = true;
+    vec4 sphereData = spheres.sphereData[objectIndex];
+
+    vec3 pos = sphereData.xyz;
+    float radius = sphereData.a;
+
+    Fullcrums fullcrums = cameraFullcrums.fullcrums[objectIndex];
+
+    visible = inPlane(fullcrums.left.rgb, fullcrums.left.a, pos, radius)  || inPlane(fullcrums.right.rgb, fullcrums.right.a, pos, radius) || inPlane(fullcrums.top.rgb, fullcrums.top.a, pos, radius) 
+                        || inPlane(fullcrums.bottom.rgb, fullcrums.bottom.a, pos, radius) || inPlane(fullcrums.far.rgb, fullcrums.far.a, pos, radius) || inPlane(fullcrums.near.rgb, fullcrums.near.a, pos, radius);
+
+    visible = !visible;
+
+	return visible;
+}
+
+layout (local_size_x = 32, local_size_y = 4, local_size_z = 1) in; 
+void main() {
+    uint x = gl_GlobalInvocationID.x;
+    uint y = gl_GlobalInvocationID.y;
+    uint i = x * 4 + y;
+    if(spheres.sphereData[i].a < 0) return;
+
+    if(!IsVisible(i)){
+        drawCommandsOut[i].instanceCount = 0;
+    }else{
+        drawCommandsOut[i].instanceCount = spheres.instanceCount[x][y];
+    }
+
+}

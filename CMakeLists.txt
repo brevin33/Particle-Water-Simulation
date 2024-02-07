@@ -12,33 +12,22 @@ endif()
 project ("Vulkan-CMake-Template")
 
 
-find_package(glm CONFIG REQUIRED)
-find_package(glfw3 CONFIG REQUIRED)
+
 find_package(imgui CONFIG REQUIRED)
-find_package(assimp CONFIG REQUIRED)
-find_package(Vulkan REQUIRED)
+add_subdirectory(include/dep/MesmerizeRenderer)
 
-add_library(MyVulkanLib STATIC "src/lib.cpp")
 
-target_include_directories(MyVulkanLib PRIVATE include/private)
-target_include_directories(MyVulkanLib PRIVATE include/dep)
-target_include_directories(MyVulkanLib PUBLIC include/public)
+add_executable(WaterSimulation "src/main.cpp" "include/private/camera.h")
 
-target_precompile_headers(MyVulkanLib PRIVATE include/private/pch.h)
+target_include_directories(WaterSimulation PRIVATE include/private)
+target_include_directories(WaterSimulation PRIVATE include/dep)
+target_include_directories(WaterSimulation PUBLIC include/public)
 
-target_link_libraries(MyVulkanLib PRIVATE glfw)
-target_link_libraries(MyVulkanLib PRIVATE Vulkan::Vulkan)
-target_link_libraries(MyVulkanLib PRIVATE glm::glm)
-target_link_libraries(MyVulkanLib PRIVATE imgui::imgui)
-target_link_libraries(MyVulkanLib PRIVATE assimp::assimp)
+target_link_libraries(WaterSimulation PUBLIC imgui::imgui)
+target_link_libraries(WaterSimulation PUBLIC MesmerizeRenderer)
 
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET MyVulkanLib PROPERTY CXX_STANDARD 20)
+  set_property(TARGET WaterSimulation PROPERTY CXX_STANDARD 20)
 endif()
 
-
-# how to use the lib in another application
-
-#add_executable (Vulkan-CMake-Template "example_deleteMe/main.cpp")
-#target_link_libraries(Vulkan-CMake-Template PRIVATE MyVulkanLib)
