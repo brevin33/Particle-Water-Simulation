@@ -1,0 +1,3 @@
+[submodule "MesmerizeRenderer"]
+	path = MesmerizeRenderer
+	url = https://github.com/brevin33/MesmerizeRenderer
