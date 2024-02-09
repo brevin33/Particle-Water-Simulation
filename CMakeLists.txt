@@ -17,7 +17,7 @@ find_package(imgui CONFIG REQUIRED)
 add_subdirectory(include/dep/MesmerizeRenderer)
 
 
-add_executable(WaterSimulation "src/main.cpp" "include/private/camera.h")
+add_executable(WaterSimulation "src/main.cpp" "src/particle.cpp")
 
 target_include_directories(WaterSimulation PRIVATE include/private)
 target_include_directories(WaterSimulation PRIVATE include/dep)

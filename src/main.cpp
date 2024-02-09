@@ -5,7 +5,7 @@
 #include "camera.h"
 #define STB_IMAGE_STATIC
 #include "stb_image.h"
-
+#include "particle.h"
 constexpr int WIDTH = 1920;
 constexpr int HEIGHT = 1080;
 constexpr bool fullScreen = false;
@@ -47,6 +47,15 @@ void main() {
 
 	MZ::setDefferedShader("../../../include/dep/MesmerizeRenderer/shaders/defferedFrag.spv", nullptr, 0, nullptr, 0);
 
+	ParticleSystem* particles = setupParticles(100, 100, glm::vec3(0));
+	auto circle = makeCircle(4);
+	MZ::VertexBufferID instanceBuffer = MZ::createCPUMutVertexBuffer(particles->data.data(), particles->data.size(), sizeof(PhysicsData), particles->data.size() * sizeof(PhysicsData));
+	MZ::VertexValueType v[] = { MZ::VTfloat3,  MZ::VTfloat3, MZ::VTfloat3 };
+	MZ::ShaderStages a = MZ::SSVert;
+	MZ::ShaderID circleShader = MZ::createShader("../../../shaders/unlitVert.spv", "../../../shaders/unlitFrag.spv", 1, nullptr, 0, &a, 1, v, 1, v, 3, MZ::NoCull);
+	MZ::MaterialID circleMaterial = MZ::createMaterial(circleShader, nullptr, 0, &MZ::mainCameraBuffer, 1);
+	MZ::addRenderObject(circleMaterial, circle.first, circle.second, instanceBuffer);
+
 
 	// load cubemap data
 	std::vector<stbi_uc> cubemapData;
@@ -75,11 +84,14 @@ void main() {
 	MZ::setSkybox(cubemap);
 
 
+
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 		float currentFrame = static_cast<float>(glfwGetTime());
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
+		updateParticles(particles, deltaTime);
+		MZ::updateCPUMutVertexBuffer(instanceBuffer, particles->data.data(), particles->data.size() * sizeof(PhysicsData), 0);
 
 		processInput(window);
 		glm::mat4 view = camera.GetViewMatrix();
