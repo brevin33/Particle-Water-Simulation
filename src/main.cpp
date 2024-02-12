@@ -47,7 +47,7 @@ void main() {
 
 	MZ::setDefferedShader("../../../include/dep/MesmerizeRenderer/shaders/defferedFrag.spv", nullptr, 0, nullptr, 0);
 
-	ParticleSystem* particles = setupParticles(100, 100, glm::vec3(0));
+	ParticleSystem* particles = setupParticles(200, 100, glm::vec3(0));
 	auto circle = makeCircle(4);
 	MZ::VertexBufferID instanceBuffer = MZ::createCPUMutVertexBuffer(particles->data.data(), particles->data.size(), sizeof(PhysicsData), particles->data.size() * sizeof(PhysicsData));
 	MZ::VertexValueType v[] = { MZ::VTfloat3,  MZ::VTfloat3, MZ::VTfloat3 };

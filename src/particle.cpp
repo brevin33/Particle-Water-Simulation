@@ -25,39 +25,62 @@ ParticleSystem* setupParticles(int numParticles, float area, glm::vec3 center){
 	return particles;
 }
 
-float smothingFunction(float dist) {
-	return 1 / (dist + 1);
+float smothingFunction1(float dist) {
+	return (1 / (dist + 0.001f)) - 0.909091f;
+}
+
+float smothingFunction2(float dist) {
+	return (1 / (dist + 1.0f)) - 0.833f;
 }
 
 void updateParticles(ParticleSystem* particles, float dt){
+	for (PhysicsData& pd : particles->data) {
+		pd.acc = glm::vec3(0);
+		pd.vel = pd.vel * 0.999f;
+	}
+
 	for (uint16_t j = 0; j < particles->data.size(); j++) {
 		PhysicsData& pd = particles->data[j];
 		int bucketX = ((pd.pos.x - particles->center.x + particles->area / 2) / particles->area) * NUMBUCKETSPERAXIS;
 		int bucketY = ((pd.pos.y - particles->center.y + particles->area / 2) / particles->area) * NUMBUCKETSPERAXIS;
 		int bucketI;
-		glm::vec3 force = glm::vec3(0);
+		glm::vec3 newPos = pd.pos + pd.vel * dt;
 		for (int x = -1; x <= 1; x++) {
 			if (bucketX + x < 0 || bucketX + x >= NUMBUCKETSPERAXIS) continue;
 			for (int y = -1; y <= 1; y++) {
 				if (bucketY + y < 0 || bucketY + y >= NUMBUCKETSPERAXIS) continue;
 				for (int i = 0; i < particles->buckets[bucketX + x][bucketY + y].size(); i++) {
 					PhysicsData& other = particles->data[particles->buckets[bucketX + x][bucketY + y][i]];
-					if (&other == &pd) { 
-						bucketI = i; continue;
+					if (&other == &pd) {
+						bucketI = i; 
+						continue;
 					}
-					float dist = std::max(glm::distance(other.pos, pd.pos),0.01f);
-					if (dist > particles->smoothingRadius) continue;
-					force += smothingFunction(dist) * (pd.pos - other.pos);
+					glm::vec3 otherNewPos = other.pos + other.vel * dt;
+					float dist = std::max(glm::distance(otherNewPos, newPos), 0.01f) / particles->smoothingRadius;
+					if (dist > 1) continue;
+					glm::vec3 a = smothingFunction1(dist) * (newPos - otherNewPos) * 1.0f;
+					pd.acc += a;
+					other.acc += -a;
+					a = smothingFunction2(dist) * (other.vel) * 0.4f * 1.0f;
+					pd.acc += -a;
+					other.acc += a;
 				}
 			}
 		}
-		pd.acc = force;
+		//pd.acc.y -= 4.5f;
 		pd.vel += pd.acc * dt;
+		newPos = pd.pos + pd.vel * dt;
+		float dampingC = 0.9f;
+		if (newPos.x >= particles->center.x + particles->area / 2) pd.vel.x = -pd.vel.x * dampingC;
+		if (newPos.y >= particles->center.y + particles->area / 2) pd.vel.y = -pd.vel.y * dampingC;
+		if (newPos.x <= particles->center.x - particles->area / 2) pd.vel.x = -pd.vel.x * dampingC;
+		if (newPos.y <= particles->center.y - particles->area / 2) pd.vel.y = -pd.vel.y * dampingC;
 		pd.pos += pd.vel * dt;
-		pd.pos.x = std::min((particles->center.x + particles->area / 2) - 0.001f, pd.pos.x);
-		pd.pos.y = std::min((particles->center.y + particles->area / 2) - 0.001f, pd.pos.y);
-		pd.pos.x = std::max((particles->center.x - particles->area / 2) + 0.001f, pd.pos.x);
-		pd.pos.y = std::max((particles->center.y - particles->area / 2) + 0.001f, pd.pos.y);
+		pd.pos.z = 0;
+		pd.pos.x = std::min((particles->center.x + particles->area / 2) - 0.00001f, pd.pos.x);
+		pd.pos.y = std::min((particles->center.y + particles->area / 2) - 0.00001f, pd.pos.y);
+		pd.pos.x = std::max((particles->center.x - particles->area / 2) + 0.00001f, pd.pos.x);
+		pd.pos.y = std::max((particles->center.y - particles->area / 2) + 0.00001f, pd.pos.y);
 		std::swap(particles->buckets[bucketX][bucketY][bucketI], particles->buckets[bucketX][bucketY].back());
 		particles->buckets[bucketX][bucketY].resize(particles->buckets[bucketX][bucketY].size() - 1);
 		int bucketX2 = ((pd.pos.x - particles->center.x + particles->area / 2) / particles->area) * NUMBUCKETSPERAXIS;
